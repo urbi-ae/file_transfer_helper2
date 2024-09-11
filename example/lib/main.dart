@@ -4,6 +4,8 @@ import 'package:file_transfer_helper/file_transfer_helper.dart';
 import 'package:file_transfer_helper/model/move_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MaterialApp(home: MyApp()));
@@ -24,6 +26,43 @@ class _MyAppState extends State<MyApp> {
 
   String fromDirectory = 'Not selected';
   String toDirectory = 'Not selected';
+
+  Future<void> export() async {
+    try {
+      // final result = await getDownloadsDirectory();
+      final result = await getApplicationDocumentsDirectory();
+      debugPrint('selectDirectory result: $result');
+      fromDirectory = result.absolute.path;
+      final selResult = await fileTransferHelperPlugin.selectDirectory();
+
+      if (selResult == null) {
+        return;
+      }
+
+      toDirectory = selResult.toString();
+
+      moveDirectory();
+
+      setState(() {});
+    } on PlatformException catch (e) {
+      print("Failed to get directory: '${e.message}'.");
+    }
+  }
+
+  Future<void> import() async {
+    try {
+      final result = await fileTransferHelperPlugin.selectDirectory();
+      if (result == null) {
+        return;
+      }
+      fromDirectory = result.toString();
+      toDirectory = await getApplicationDocumentsDirectory().then((value) => value.absolute.path);
+      setState(() {});
+      await moveDirectory();
+    } on PlatformException catch (e) {
+      print("Failed to get directory: '${e.message}'.");
+    }
+  }
 
   Future<void> selectDirectory(String type) async {
     try {
@@ -49,6 +88,15 @@ class _MyAppState extends State<MyApp> {
       if (fromDirectory == 'Not selected' || toDirectory == 'Not selected') {
         setState(() {
           operationStatus = "Please select both directories";
+        });
+        return;
+      }
+
+      final storagePermissionStatus = await Permission.manageExternalStorage.request();
+
+      if (storagePermissionStatus != PermissionStatus.granted) {
+        setState(() {
+          operationStatus = "Storage permission not granted";
         });
         return;
       }
@@ -85,7 +133,10 @@ class _MyAppState extends State<MyApp> {
             Text(fromDirectory),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => selectDirectory('from'),
+              onPressed: () {
+                // export()
+                selectDirectory('from');
+              },
               child: const Text("set from Directory"),
             ),
             const SizedBox(height: 20),
@@ -99,6 +150,16 @@ class _MyAppState extends State<MyApp> {
             ElevatedButton(
               onPressed: moveDirectory,
               child: const Text("Move Directory"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: export,
+              child: const Text("Export Directory"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: import,
+              child: const Text("Import Directory"),
             ),
             const SizedBox(height: 20),
             Text(operationStatus),
