@@ -42,6 +42,8 @@ flutter:
       android:
         package: com.example.file_transfer_helper
         pluginClass: FileTransferHelperPlugin
+      ios:
+        pluginClass: FileTransferHelperPlugin
     # -------------------
 
   # To add assets to your plugin package, add an assets section, like this:

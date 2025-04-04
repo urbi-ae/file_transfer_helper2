@@ -12,6 +12,14 @@ import 'file_transfer_helper_platform_interface.dart';
 class FileTransferHelper {
   Future<String?> selectDirectory() => FileTransferHelperPlatform.instance.selectDirectory();
 
-  Stream<MoveProgress> move(String fromPath, String toPath) =>
-      FileTransferHelperPlatform.instance.move(fromPath, toPath);
+  Stream<MoveProgress> move(
+    String fromPath,
+    String toPath, {
+    bool deleteOriginal = true,
+  }) =>
+      FileTransferHelperPlatform.instance.move(
+         fromPath,
+          toPath,
+        deleteOriginal: deleteOriginal,
+      );
 }

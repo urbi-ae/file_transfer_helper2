@@ -28,7 +28,28 @@ abstract class FileTransferHelperPlatform extends PlatformInterface {
     throw UnimplementedError('selectDirectory() has not been implemented.');
   }
 
-  Stream<MoveProgress> move(String fromPath, String toPath) {
-    throw UnimplementedError('move() has not been implemented.');
+  Stream<MoveProgress> move(
+    String from,
+    String to, {
+    bool deleteOriginal = true,
+  }) {
+    // TODO: implement move
+    throw UnimplementedError();
   }
+}
+
+
+class FileTransferException implements Exception {
+  final String code;
+  final String? message;
+  final dynamic details;
+
+  FileTransferException({
+    required this.code,
+    this.message,
+    this.details,
+  });
+
+  @override
+  String toString() => 'FileTransferException($code): $message';
 }

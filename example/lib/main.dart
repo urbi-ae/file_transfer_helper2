@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_transfer_helper/file_transfer_helper.dart';
 import 'package:file_transfer_helper/model/move_progress.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -44,8 +44,8 @@ class _MyAppState extends State<MyApp> {
       moveDirectory();
 
       setState(() {});
-    } on PlatformException catch (e) {
-      print("Failed to get directory: '${e.message}'.");
+    } on Exception catch (e) {
+      print("Failed to get directory: '$e'.");
     }
   }
 
@@ -59,8 +59,8 @@ class _MyAppState extends State<MyApp> {
       toDirectory = await getApplicationDocumentsDirectory().then((value) => value.absolute.path);
       setState(() {});
       await moveDirectory();
-    } on PlatformException catch (e) {
-      print("Failed to get directory: '${e.message}'.");
+    } on Exception catch (e) {
+      print("Failed to get directory: '$e'.");
     }
   }
 
@@ -78,8 +78,8 @@ class _MyAppState extends State<MyApp> {
           toDirectory = result.toString();
         }
       });
-    } on PlatformException catch (e) {
-      print("Failed to get directory: '${e.message}'.");
+    } on Exception catch (e) {
+      print("Failed to get directory: '$e'.");
     }
   }
 
@@ -92,16 +92,18 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
-      final storagePermissionStatus = await Permission.manageExternalStorage.request();
+      if (Platform.isAndroid) {
+        final storagePermissionStatus = await Permission.manageExternalStorage.request();
 
-      if (storagePermissionStatus != PermissionStatus.granted) {
-        setState(() {
-          operationStatus = "Storage permission not granted";
-        });
-        return;
+        if (storagePermissionStatus != PermissionStatus.granted) {
+          setState(() {
+            operationStatus = "Storage permission not granted";
+          });
+          return;
+        }
       }
 
-      final sub = fileTransferHelperPlugin.move(fromDirectory, toDirectory);
+      final sub = fileTransferHelperPlugin.move(fromDirectory, toDirectory, deleteOriginal: false);
       late final StreamSubscription<MoveProgress> subscription;
       subscription = sub.listen((event) {
         if (event.progress == 100) {
@@ -112,10 +114,10 @@ class _MyAppState extends State<MyApp> {
           operationStatus = "Moving file: ${event.currentFile} (${event.progress})";
         });
       });
-    } on PlatformException catch (e) {
-      print("Failed to move directory: ${e.message}");
+    } on Exception catch (e) {
+      print("Failed to move directory: $e");
       setState(() {
-        operationStatus = "Failed to move directory: ${e.message}";
+        operationStatus = "Failed to move directory: $e";
       });
     }
   }
