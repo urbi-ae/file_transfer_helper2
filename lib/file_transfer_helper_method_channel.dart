@@ -1,3 +1,4 @@
+import 'package:file_transfer_helper/model/external_storage.dart';
 import 'package:file_transfer_helper/model/move_progress.dart';
 import 'package:flutter/services.dart';
 
@@ -44,4 +45,18 @@ class MethodChannelFileTransferHelper extends FileTransferHelperPlatform {
       }
     });
   }
+
+  @override
+  Future<List<ExternalStorage>> getExternalStorageInfo() => _channel.invokeMethod<Map>('getExternalStorageInfo').then(
+        (value) {
+          final storages = value?['storages'] as List?;
+
+          return storages
+                  ?.map((externalStorage) => ExternalStorage.fromMap(
+                        Map<String, dynamic>.from(externalStorage as Map),
+                      ))
+                  .toList() ??
+              [];
+        },
+      );
 }

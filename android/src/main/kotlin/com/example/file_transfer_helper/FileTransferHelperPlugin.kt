@@ -11,6 +11,8 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.Result
+import android.os.Environment
+import android.os.StatFs
 
 class FileTransferHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware {
 
@@ -60,6 +62,8 @@ class FileTransferHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
             val deleteOriginal = call.argument<Boolean>("deleteOriginal") ?: true
 
             FileMover(activity!!, eventSink).move(from, to, deleteOriginal, result)
+        }  "getExternalStorageInfo" -> {
+                result.success(getExternalStorageInfo())
         }
             else -> result.notImplemented()
         }
@@ -75,6 +79,31 @@ class FileTransferHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
                 false
             }
         }
+    }
+
+
+     fun getExternalStorageInfo(): Map<String, Any> {
+        val externalDirs = activity!!.getExternalFilesDirs(null)
+        val result = mutableListOf<Map<String, Any>>()
+
+        for (dir in externalDirs) {
+            if (dir != null) {
+                val stat = StatFs(dir.path)
+                val isRemovable = Environment.isExternalStorageRemovable(dir)
+                val available = stat.availableBytes
+                result.add(
+                    mapOf(
+                        "path" to dir.absolutePath,
+                        "isRemovable" to isRemovable,
+                        "freeBytes" to available
+                    )
+                )
+            }
+        }
+
+        return mapOf(
+            "storages" to result
+        )
     }
 
     private fun handleDirectoryResult(resultCode: Int, data: Intent?) {
