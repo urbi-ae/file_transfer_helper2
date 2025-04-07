@@ -32,7 +32,15 @@ class _MyAppState extends State<MyApp> {
       // final result = await getDownloadsDirectory();
       final result = await getApplicationDocumentsDirectory();
       debugPrint('selectDirectory result: $result');
-      fromDirectory = result.absolute.path;
+      // fromDirectory = result.absolute.path;
+      fromDirectory = result.path;
+
+      final file = File('${result.path}/hello.txt');
+      await file.writeAsString('Hello world');
+
+      print("✅ File exists: ${file.path}");
+      print("✅ File exists: ${file.existsSync()}");
+
       final selResult = await fileTransferHelperPlugin.selectDirectory();
 
       if (selResult == null) {
@@ -56,7 +64,7 @@ class _MyAppState extends State<MyApp> {
         return;
       }
       fromDirectory = result.toString();
-      toDirectory = await getApplicationDocumentsDirectory().then((value) => value.absolute.path);
+      toDirectory = await getApplicationDocumentsDirectory().then((value) => value.path);
       setState(() {});
       await moveDirectory();
     } on Exception catch (e) {
@@ -102,6 +110,8 @@ class _MyAppState extends State<MyApp> {
           return;
         }
       }
+      debugPrint("FROM: $fromDirectory");
+      debugPrint("TO: $toDirectory");
 
       final sub = fileTransferHelperPlugin.move(fromDirectory, toDirectory, deleteOriginal: false);
       late final StreamSubscription<MoveProgress> subscription;

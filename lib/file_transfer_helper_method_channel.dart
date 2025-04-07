@@ -22,16 +22,14 @@ class MethodChannelFileTransferHelper extends FileTransferHelperPlatform {
         .where((t) => t != null)
         .map((event) => MoveProgress.fromMap(Map<String, dynamic>.from(event as Map)));
 
-    Future.microtask(() {
-      _channel.invokeMethod(
-        'move',
-        {
-          'from': from,
-          'to': to,
-          'deleteOriginal': deleteOriginal,
-        },
-      );
-    });
+    _channel.invokeMethod(
+      'move',
+      {
+        'from': from,
+        'to': to,
+        'deleteOriginal': deleteOriginal,
+      },
+    );
 
     return stream.handleError((error) {
       if (error is PlatformException) {
