@@ -45,9 +45,9 @@ class FileTransferHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
         eventChannel.setStreamHandler(null)
     }
 
-    override fun onMethodCall(call: MethodCall, result: Result) {
-        when (call.method) {
-             "selectDirectory" -> {
+   override fun onMethodCall(call: MethodCall, result: Result) {
+    when (call.method) {
+        "selectDirectory" -> {
             resultPending = result
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -56,18 +56,19 @@ class FileTransferHelperPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
             }
             activity?.startActivityForResult(intent, SEL_DIR_REQUEST_CODE)
         }
-            "move" -> {
+        "move" -> {
             val from = call.argument<String>("from")!!
             val to = call.argument<String>("to")!!
             val deleteOriginal = call.argument<Boolean>("deleteOriginal") ?: true
 
             FileMover(activity!!, eventSink).move(from, to, deleteOriginal, result)
-        }  "getExternalStorageInfo" -> {
-                result.success(getExternalStorageInfo())
         }
-            else -> result.notImplemented()
+        "getExternalStorageInfo" -> {
+            result.success(getExternalStorageInfo())
         }
+        else -> result.notImplemented()
     }
+}
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
