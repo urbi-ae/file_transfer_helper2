@@ -30,8 +30,12 @@ class _MyAppState extends State<MyApp> {
   Future<void> export() async {
     try {
       // final result = await getDownloadsDirectory();
-      final result = await getApplicationDocumentsDirectory();
+      final result = await getApplicationDocumentsDirectory().then((value) => Directory('${value.path}/test'));
       debugPrint('selectDirectory result: $result');
+
+      if (!result.existsSync()) {
+        await result.create(recursive: true);
+      }
       // fromDirectory = result.absolute.path;
       fromDirectory = result.path;
 

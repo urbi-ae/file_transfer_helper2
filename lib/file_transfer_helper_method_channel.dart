@@ -2,6 +2,8 @@ import 'package:file_transfer_helper/model/external_storage.dart';
 import 'package:file_transfer_helper/model/move_progress.dart';
 import 'package:flutter/services.dart';
 
+import 'dart:async';
+
 import 'file_transfer_helper_platform_interface.dart';
 
 /// An implementation of [FileTransferHelperPlatform] that uses method channels.
@@ -18,23 +20,32 @@ class MethodChannelFileTransferHelper extends FileTransferHelperPlatform {
     String to, {
     bool deleteOriginal = true,
   }) {
+    
+    final controller = StreamController<MoveProgress>();
+
     final stream = _progressChannel
         .receiveBroadcastStream()
         .where((t) => t != null)
-        .map((event) => MoveProgress.fromMap(Map<String, dynamic>.from(event as Map)));
+        .map((event) => MoveProgress.fromMap(Map<String, dynamic>.from(event as Map)))
+        .listen(
+          controller.add,
+          onError: controller.addError,
+          onDone: controller.close,
+        );
 
-    _channel.invokeMethod(
-      'move',
-      {
-        'from': from,
-        'to': to,
-        'deleteOriginal': deleteOriginal,
-      },
-    );
+    Future.microtask(() {
+      _channel.invokeMethod(
+        'move',
+        {
+          'from': from,
+          'to': to,
+          'deleteOriginal': deleteOriginal,
+        },
+      ).catchError(controller.addError);
+    });
 
-    return stream.handleError((error) {
+    return controller.stream.handleError((error) {
       if (error is PlatformException) {
-        // Обработка ошибки от native-кода
         throw FileTransferException(
           code: error.code,
           message: error.message,

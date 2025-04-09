@@ -35,13 +35,32 @@ class FileMover(
                 from is File && to is DocumentFile -> moveToDocumentFile(from, to, deleteOriginal, progress)
                 from is DocumentFile && to is File -> moveFromDocumentFile(from, to, deleteOriginal, progress)
                 from is DocumentFile && to is DocumentFile -> moveDocToDoc(from, to, deleteOriginal, progress)
-                else -> result.error("UNSUPPORTED", "Unsupported move operation", null)
+                else -> sendError(result, sink, "UNSUPPORTED", "Unsupported move operation")
             }
 
             result.success(null)
+            sink?.endOfStream()
         } catch (e: Exception) {
-            Log.e("FileMover", "❌ MOVE_FAILED: ${e.message}", e)
-            result.error("MOVE_FAILED", e.message, null)
+            sendError(result, sink, "MOVE_FAILED", "Move operation failed", e)
+        }
+    }
+
+    private fun sendError(
+        methodResult: MethodChannel.Result?,
+        eventSink: EventChannel.EventSink?,
+        code: String,
+        message: String,
+        throwable: Throwable? = null
+    ) {
+        val fullMessage = "$message${throwable?.let { ": ${it.message}" } ?: ""}"
+        val stack = throwable?.stackTraceToString()
+
+        methodResult?.error(code, fullMessage, stack)
+        eventSink?.error(code, fullMessage, stack)
+
+        Log.e("FileMover", "❌ $code: $fullMessage")
+        if (stack != null) {
+            Log.e("FileMover", stack)
         }
     }
 
@@ -84,23 +103,22 @@ class FileMover(
     }
 
     private fun moveToDocumentFile(source: File, target: DocumentFile, deleteOriginal: Boolean, progress: Progress) {
-    if (shouldSkip(source)) return
+        if (shouldSkip(source)) return
 
-    if (source.isDirectory) {
-        Log.d("FileMover", "📁 Creating directory in DocumentFile: ${source.name}")
-        val newDir = target.findFile(source.name)?.takeIf { it.isDirectory }
-            ?: target.createDirectory(source.name)
+        if (source.isDirectory) {
+            Log.d("FileMover", "📁 Creating directory in DocumentFile: ${source.name}")
+            val newDir = target.findFile(source.name)?.takeIf { it.isDirectory }
+                ?: target.createDirectory(source.name)
 
-        source.listFiles()?.forEach { child ->
-            moveToDocumentFile(child, newDir!!, deleteOriginal, progress)
+            source.listFiles()?.forEach { child ->
+                moveToDocumentFile(child, newDir!!, deleteOriginal, progress)
+            }
+            if (deleteOriginal) source.deleteRecursively()
+        } else {
+            Log.d("FileMover", "📄 Moving file to DocumentFile: ${source.name}")
+            copyFileToDocumentFile(source, target, deleteOriginal, progress)
         }
-        if (deleteOriginal) source.deleteRecursively()
-    } else {
-        Log.d("FileMover", "📄 Moving file to DocumentFile: ${source.name}")
-        copyFileToDocumentFile(source, target, deleteOriginal, progress)
     }
-}
-
 
     private fun moveFromDocumentFile(source: DocumentFile, target: File, deleteOriginal: Boolean, progress: Progress) {
         if (shouldSkip(source)) return
@@ -166,6 +184,7 @@ class FileMover(
             progress.successCount++
         } catch (e: Exception) {
             Log.e("FileMover", "❌ Failed to copy ${file.path}", e)
+            sendError(null, sink, "MOVE_FAILED", "Failed to copy file ${file.path}", e)
             progress.failureCount++
         }
         sendProgress(file.name ?: "file", progress)
@@ -198,6 +217,7 @@ class FileMover(
             progress.successCount++
         } catch (e: Exception) {
             Log.e("FileMover", "❌ Failed to copy ${doc.uri}", e)
+            sendError(null, sink, "MOVE_FAILED", "Failed to copy from DocumentFile ${doc.uri}", e)
             progress.failureCount++
         }
         sendProgress(doc.name ?: "file", progress)
@@ -233,6 +253,7 @@ class FileMover(
             progress.successCount++
         } catch (e: Exception) {
             Log.e("FileMover", "❌ Failed to copy from doc to doc: ${doc.uri}", e)
+            sendError(null, sink, "MOVE_FAILED", "Failed to copy to DocumentFile ${doc.uri}", e)
             progress.failureCount++
         }
 
@@ -277,21 +298,8 @@ class FileMover(
         return if (isDocumentUri(input)) {
             DocumentFile.fromTreeUri(activity, Uri.parse(input))!!
         } else {
-            val resolved = resolveInternalPath(input)
             val file = File(input)
-            Log.d("FileMover", "📄 Resolved path: $resolved exists=${file.exists()} size=${file.length()}B")
             file
         }
     }
-
-    private fun resolveInternalPath(input: String): String {
-    val packageName = activity.packageName
-
-    return if (input.startsWith("/data/user/0/")) {
-        input.replace("/data/user/0/$packageName/app_flutter", "/data/data/$packageName/files")
-    } else {
-        input 
-    }
 }
-
-}    
