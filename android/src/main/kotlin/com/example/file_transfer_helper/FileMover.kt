@@ -295,11 +295,27 @@ class FileMover(
     }
 
     private fun getAnyFile(input: String): Any {
-        return if (isDocumentUri(input)) {
-            DocumentFile.fromTreeUri(activity, Uri.parse(input))!!
+    return if (isDocumentUri(input)) {
+        val uri = Uri.parse(input)
+        val treeDoc = DocumentFile.fromTreeUri(activity, uri)!!
+
+        val path = uri.path ?: return treeDoc
+
+        val segments = path.split(":")
+        if (segments.size == 2) {
+            val fullPath = segments[1] // e.g.
+            val parts = fullPath.split("/")
+            var current = treeDoc
+            for (part in parts.drop(1)) { // skip root
+                current = current.findFile(part) ?: return treeDoc
+            }
+            current
         } else {
-            val file = File(input)
-            file
+            treeDoc
         }
+    } else {
+        File(input)
     }
+}
+
 }
