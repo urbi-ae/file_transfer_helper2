@@ -21,22 +21,50 @@ class FileMover(
 
     fun move(fromRaw: String, toRaw: String, deleteOriginal: Boolean, result: MethodChannel.Result) {
         try {
-            val from = getAnyFile(fromRaw)
-            val to = getAnyFile(toRaw)
+          val from = getAnyFile(fromRaw)
+val to = getAnyFile(toRaw)
 
-            Log.d("FileMover", "🔄 Moving from: $fromRaw → $toRaw")
+Log.d("FileMover", "🔄 Moving from: $fromRaw → $toRaw")
 
-            val progress = Progress()
-            countFiles(from, progress)
-            sendProgress("start", progress)
+val progress = Progress()
+countFiles(from, progress)
+sendProgress("start", progress)
 
-            when {
-                from is File && to is File -> moveInternalToInternal(from, to, deleteOriginal, progress)
-                from is File && to is DocumentFile -> moveToDocumentFile(from, to, deleteOriginal, progress)
-                from is DocumentFile && to is File -> moveFromDocumentFile(from, to, deleteOriginal, progress)
-                from is DocumentFile && to is DocumentFile -> moveDocToDoc(from, to, deleteOriginal, progress)
-                else -> sendError(result, sink, "UNSUPPORTED", "Unsupported move operation")
+when {
+    from is File && to is File -> {
+        if (from.isDirectory) {
+            from.listFiles()?.forEach {
+                moveInternalToInternal(it, to, deleteOriginal, progress)
             }
+        } else {
+            moveInternalToInternal(from, to, deleteOriginal, progress)
+        }
+    }
+    from is File && to is DocumentFile -> {
+       
+            moveToDocumentFile(from, to, deleteOriginal, progress)
+         
+    }
+    from is DocumentFile && to is File -> {
+        if (from.isDirectory) {
+            from.listFiles().forEach {
+                moveFromDocumentFile(it, to, deleteOriginal, progress)
+            }
+        } else {
+            moveFromDocumentFile(from, to, deleteOriginal, progress)
+        }
+    }
+    from is DocumentFile && to is DocumentFile -> {
+        if (from.isDirectory) {
+            from.listFiles().forEach {
+                moveDocToDoc(it, to, deleteOriginal, progress)
+            }
+        } else {
+            moveDocToDoc(from, to, deleteOriginal, progress)
+        }
+    }
+    else -> sendError(result, sink, "UNSUPPORTED", "Unsupported move operation")
+}
 
             result.success(null)
             sink?.endOfStream()
